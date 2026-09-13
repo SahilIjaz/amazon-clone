@@ -54,11 +54,13 @@ class BlobMirror {
     this.lastCheck = now;
     try {
       const b = (await this.newest())[0];
-      if (!b) return false;
+      if (!b) { if (force) console.log("[db] no mirrored database yet"); return false; }
       const at = new Date(b.uploadedAt).getTime();
       if (at <= this.lastSeen) return false;
-      fs.writeFileSync(this.file, await download(b.url));
+      const buf = await download(b.url);
+      fs.writeFileSync(this.file, buf);
       this.lastSeen = at;
+      console.log(`[db] pulled ${b.pathname} (${buf.length} bytes)`);
       return true;
     } catch (e) { console.error("[db] blob pull failed", (e as Error).message, (e as { cause?: Error }).cause?.message); return false; }
   }
