@@ -2,6 +2,7 @@ import { createClient, type Client, type InArgs, type InValue } from "@libsql/cl
 import path from "node:path";
 import fs from "node:fs";
 import https from "node:https";
+import { cookies } from "next/headers";
 
 /**
  * Database access (libSQL / SQLite dialect).
@@ -31,61 +32,80 @@ export class Db {
   constructor(client: Client, private mirror: BlobMirror | null) { this.client = client; }
   prepare(sql: string) { return new Statement(this, sql); }
   exec(sql: string) { return this.client.executeMultiple(sql); }
-  async persist() { if (this.mirror) await this.mirror.upload(); }
-  async refresh() { if (this.mirror && (await this.mirror.pullIfNewer())) { this.client.close(); this.client = await fileClient(this.mirror.file); } }
+  async persist() {
+    if (!this.mirror) return;
+    const v = await this.mirror.upload();
+    try { (await cookies()).set(VERSION_COOKIE, String(v), { path: "/", sameSite: "lax", maxAge: 60 * 60 * 24 * 30 }); } catch { /* not in a route handler: the version still propagates through listing */ }
+  }
+  async refresh() {
+    if (!this.mirror) return;
+    let want = 0;
+    try { want = Number((await cookies()).get(VERSION_COOKIE)?.value || 0); } catch { /* no request scope */ }
+    if (await this.mirror.ensure(want)) { this.client.close(); this.client = await fileClient(this.mirror.file); }
+  }
 }
 
 /**
- * Mirrors the SQLite file to one Vercel Blob (db/amazon.db). Discovery uses head() on that fixed pathname (the listing
- * API is only eventually consistent), and downloads add a cache-busting query so the edge cache never serves a stale
- * copy after an overwrite. Last writer wins, which is fine for a demo store.
+ * Mirrors the SQLite file to Vercel Blob so serverless instances share state without a hosted database.
+ * Every upload gets an immutable pathname db/amazon-<version>.db (version = ms timestamp), so downloads are never
+ * served stale from the edge cache and never depend on the eventually-consistent listing/head APIs. The version a
+ * browser last wrote or read travels in the `az_v` cookie: an instance that is behind that version fetches exactly that
+ * file before answering, which keeps each shopper's own flow consistent across instances. Instances also converge on
+ * the newest listed version in the background. Last writer wins; fine for a demo store.
  */
-const POINTER = "db/amazon.db";
+export const VERSION_COOKIE = "az_v";
+const PREFIX = "db/amazon-";
+const versionOf = (pathname: string) => Number(pathname.slice(PREFIX.length).replace(/\.db$/, "")) || 0;
 class BlobMirror {
-  private lastSeen = 0; private lastCheck = 0; private uploading: Promise<void> | null = null; private dirty = false;
+  version = 0; private lastList = 0; private uploading: Promise<void> | null = null; private dirty = false;
   constructor(public file: string) {}
   private async sdk() { return import("@vercel/blob"); }
-  /** head() with retries: an overwrite in progress can 404 for a moment. */
-  private async pointer(): Promise<{ url: string; uploadedAt: Date } | null> {
-    const { head, list } = await this.sdk();
-    for (let i = 0; i < 4; i++) {
-      try { return await head(POINTER); } catch { await new Promise((r) => setTimeout(r, 200 * (i + 1))); }
-    }
-    try { const { blobs } = await list({ prefix: POINTER, limit: 1 }); return blobs[0] ?? null; } catch { return null; }
-  }
-  async pullIfNewer(force = false): Promise<boolean> {
-    const now = Date.now();
-    if (!force && now - this.lastCheck < 400) return false;
-    this.lastCheck = now;
+  private async newestListed(): Promise<{ v: number; url: string } | null> {
     try {
-      const h = await this.pointer();
-      if (!h) { if (force) console.log("[db] no mirrored database yet"); return false; }
-      const at = new Date(h.uploadedAt).getTime();
-      if (at <= this.lastSeen) return false;
-      const buf = await download(`${h.url}?v=${at}`);
-      fs.writeFileSync(this.file, buf);
-      this.lastSeen = at;
-      console.log(`[db] pulled mirror from ${new Date(at).toISOString()} (${buf.length} bytes)`);
-      return true;
-    } catch (e) { console.error("[db] blob pull failed", (e as Error).message, (e as { cause?: Error }).cause?.message); return false; }
+      const { list } = await this.sdk();
+      const { blobs } = await list({ prefix: PREFIX, limit: 1000 });
+      const best = blobs.map((b) => ({ v: versionOf(b.pathname), url: b.url })).sort((a, b) => b.v - a.v)[0];
+      return best ?? null;
+    } catch (e) { console.error("[db] blob list failed", (e as Error).message); return null; }
   }
-  async upload() {
+  /** Bring the local file up to at least `want` (a version seen in a cookie), or to the newest listed version. */
+  async ensure(want: number, force = false): Promise<boolean> {
+    let target: { v: number; url: string } | null = null;
+    if (want > this.version) target = { v: want, url: `${this.base()}${PREFIX}${want}.db` };
+    else if (force || Date.now() - this.lastList > 5000) { this.lastList = Date.now(); const n = await this.newestListed(); if (n && n.v > this.version) target = n; }
+    if (!target) return false;
+    for (let i = 0; i < 3; i++) {
+      try { const buf = await download(target.url); fs.writeFileSync(this.file, buf); this.version = target.v; console.log(`[db] pulled version ${target.v} (${buf.length} bytes)`); return true; }
+      catch (e) { if (i === 2) console.error("[db] blob pull failed", (e as Error).message); else await new Promise((r) => setTimeout(r, 250)); }
+    }
+    return false;
+  }
+  /** Public host of the store, derived from the token (vercel_blob_rw_<storeId>_…) so cold instances can fetch by version. */
+  private base() {
+    if (process.env.BLOB_BASE_URL) return process.env.BLOB_BASE_URL;
+    const m = (process.env.BLOB_READ_WRITE_TOKEN || "").match(/^vercel_blob_rw_([A-Za-z0-9]+)_/);
+    return m ? `https://${m[1]!.toLowerCase()}.public.blob.vercel-storage.com/` : "";
+  }
+  async upload(): Promise<number> {
     this.dirty = true;
-    if (this.uploading) return this.uploading;
+    if (this.uploading) { await this.uploading; return this.version; }
     this.uploading = (async () => {
       while (this.dirty) {
         this.dirty = false;
+        const v = Math.max(Date.now(), this.version + 1);
         try {
-          const { put } = await this.sdk();
-          await put(POINTER, fs.readFileSync(this.file), { access: "public", addRandomSuffix: false, allowOverwrite: true, contentType: "application/octet-stream" });
-          const h = await this.pointer();
-          this.lastSeen = h ? new Date(h.uploadedAt).getTime() : Date.now() + 2000;
-          console.log(`[db] mirrored ${fs.statSync(this.file).size} bytes to blob`);
+          const { put, del, list } = await this.sdk();
+          const r = await put(`${PREFIX}${v}.db`, fs.readFileSync(this.file), { access: "public", addRandomSuffix: false, contentType: "application/octet-stream", cacheControlMaxAge: 31536000 });
+          this.version = v;
+          if (!process.env.BLOB_BASE_URL) process.env.BLOB_BASE_URL = r.url.slice(0, r.url.indexOf(PREFIX));
+          console.log(`[db] mirrored version ${v} (${fs.statSync(this.file).size} bytes)`);
+          if (v % 10 === 0 || Math.random() < 0.1) { const { blobs } = await list({ prefix: PREFIX, limit: 1000 }); const old = blobs.map((b) => ({ v: versionOf(b.pathname), url: b.url })).sort((a, b) => b.v - a.v).slice(30).map((x) => x.url); if (old.length) await del(old).catch(() => {}); }
         } catch (e) { console.error("[db] blob upload failed", (e as Error).message); }
       }
       this.uploading = null;
     })();
-    return this.uploading;
+    await this.uploading;
+    return this.version;
   }
 }
 
@@ -116,7 +136,7 @@ async function open(): Promise<Db> {
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, "amazon.db");
   let mirror: BlobMirror | null = null;
-  if (process.env.VERCEL && process.env.BLOB_READ_WRITE_TOKEN) { mirror = new BlobMirror(file); await mirror.pullIfNewer(true); }
+  if (process.env.VERCEL && process.env.BLOB_READ_WRITE_TOKEN) { mirror = new BlobMirror(file); await mirror.ensure(0, true); }
   else if (process.env.VERCEL) console.warn("[db] no TURSO_DATABASE_URL or BLOB_READ_WRITE_TOKEN: using an ephemeral /tmp database.");
   return new Db(await fileClient(file), mirror);
 }
