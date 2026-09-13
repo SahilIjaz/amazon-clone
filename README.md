@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Amazon rebuild
 
-## Getting Started
+A working rebuild of amazon.com: browse, search, product pages, cart, sign-up with e-mailed one-time passwords, checkout, order history, lists, reviews, deals, help and account settings.
 
-First, run the development server:
+Built with Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS v4 and libSQL (SQLite locally, Turso in production). The agent session that produced it is logged in [`.agent-logs/`](.agent-logs/).
+
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+No configuration is needed. Verification codes and order confirmations are kept in a local inbox at `/dev/inbox`; add SMTP variables to have them e-mailed for real:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@gmail.com
+SMTP_PASS=app-password
+MAIL_FROM="Amazon <you@gmail.com>"
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Production build: `npm run build && npm start`. If a dev server is running in the same folder, build into a separate directory: `NEXT_DIST_DIR=.next-prod npm run build`.
 
-## Learn More
+## What's in the box
 
-To learn more about Next.js, take a look at the following resources:
+| Area | Routes |
+|---|---|
+| Home | `/` hero carousel, card grid, product rows, browsing-history row when signed in |
+| Search | `/s?k=…&i=…` refinements (department, category, reviews, price, deals, brands, Prime), sort, pagination |
+| Product | `/dp/:id/:slug` gallery, buy box, related items, reviews with histogram, `/review/create/:id` |
+| Cart | `/cart` quantities, delete, save for later, guest cart merged on sign-in |
+| Auth | `/ap/signin`, `/ap/register` (OTP), `/ap/forgotpassword` (OTP), `/api/auth/logout` |
+| Checkout | `/checkout` addresses, payment methods (demo cards, last four digits stored), shipping speed, `/checkout/thankyou` |
+| Account | `/your-account`, `/your-account/{addresses,payments,security,prime}`, `/gp/css/order-history`, `/gp/css/order-details`, `/hz/wishlist/ls`, `/gp/history` |
+| Store | `/deals`, `/gp/help/customer/display.html`, `/customer-preferences/edit` |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Data
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Amazon's own listings and imagery are copyrighted, so the catalog is a public product dataset (194 items across 9 departments, `src/data/products.json`, images in `public/products`), normalised with Amazon-style fields: list price, rating, review counts, Prime eligibility, stock.
 
-## Deploy on Vercel
+The database schema lives in `src/lib/db.ts` (users, sessions, OTP codes, outbox, addresses, payment methods, carts, orders, lists, reviews, browsing history). Without `TURSO_DATABASE_URL` on Vercel the app uses an ephemeral SQLite file, so accounts reset between deployments; set `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` for persistence.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The repository is connected to Vercel: every push to `main` deploys. Set the SMTP variables (and Turso, if wanted) in the project's Environment Variables.
+
+## What was left out on purpose
+
+Prime Video, Kindle, Alexa and other digital products; third-party seller marketplace mechanics; real payment processing; personalised ads. Everything a shopper touches on the way from the home page to a placed order is here and works end to end.
