@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ChromeGate from "@/components/ChromeGate";
 
 export const metadata: Metadata = {
   title: { default: "Amazon.com. Spend less. Smile more.", template: "Amazon.com: %s" },
@@ -15,9 +16,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en-us">
       <body className="min-h-screen bg-bg">
-        <Suspense fallback={<div className="h-[99px] bg-nav" />}><Header /></Suspense>
-        <main className="min-h-[60vh]">{children}</main>
-        <Footer />
+        <ChromeGate header={<Suspense fallback={<div className="h-[99px] bg-nav" />}><Header /></Suspense>} footer={<Footer />}>{children}</ChromeGate>
       </body>
     </html>
   );

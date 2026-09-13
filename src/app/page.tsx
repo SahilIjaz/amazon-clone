@@ -45,7 +45,7 @@ function Row({ title, items, href }: { title: string; items: Product[]; href?: s
   return (
     <section className="bg-white p-5">
       <div className="flex items-baseline gap-4"><h2 className="a-section-head">{title}</h2>{href && <Link href={href} className="text-[13px]">See more</Link>}</div>
-      <div className="mt-3 flex gap-4 overflow-x-auto pb-2">{items.map((p) => <GridCard key={p.id} p={p} />)}</div>
+      <div className="mt-3 flex gap-4 overflow-x-auto pb-2">{items.map((p) => <GridCard key={p.id} p={p} eager />)}</div>
     </section>
   );
 }

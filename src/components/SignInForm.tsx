@@ -18,7 +18,7 @@ export default function SignInForm({ returnTo, presetEmail }: { returnTo: string
   const next = async (e: React.FormEvent) => { e.preventDefault(); setErr(null); setBusy(true);
     const r = await post("/api/auth/lookup", { email }); setBusy(false);
     if (!r.ok) { setErr(r.error || "Something went wrong"); return; }
-    if (!r.exists) { window.location.href = `/ap/register?email=${encodeURIComponent(email)}`; return; }
+    if (!r.exists) { window.location.href = `/ap/register?email=${encodeURIComponent(email)}&returnTo=${encodeURIComponent(returnTo)}`; return; }
     setStep("password"); };
   const signIn = async (e: React.FormEvent) => { e.preventDefault(); setErr(null); setBusy(true);
     const r = await post("/api/auth/login", { email, password, returnTo }); setBusy(false);

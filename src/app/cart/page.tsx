@@ -24,7 +24,7 @@ export default async function CartPage() {
           <section className="bg-white p-5">
             {active.length === 0 ? (
               <div className="flex items-center gap-6">
-                <div className="grid h-[180px] w-[220px] place-items-center rounded-lg bg-[#f0f2f2] text-6xl">🛒</div>
+                <svg width="240" height="180" viewBox="0 0 240 180" aria-hidden="true"><rect x="0" y="0" width="240" height="180" rx="12" fill="#f0f2f2" /><rect x="30" y="60" width="86" height="64" rx="8" fill="#d5dbdb" /><rect x="38" y="68" width="70" height="46" rx="4" fill="#fff" /><path d="M140 70h44a8 8 0 0 1 8 8v30a8 8 0 0 1-8 8h-44z" fill="#f2b8a2" /><path d="M192 84h10a8 8 0 0 1 0 16h-10" fill="none" stroke="#f2b8a2" strokeWidth="6" /><rect x="134" y="116" width="66" height="8" rx="4" fill="#c7cbcb" /><path d="M60 40c0-10 30-14 44-8" stroke="#7f8a8a" strokeWidth="4" fill="none" strokeLinecap="round" /><circle cx="150" cy="40" r="14" fill="#febd69" /></svg>
                 <div>
                   <h1 className="text-[24px] font-bold">Your Amazon Cart is empty</h1>
                   <p className="mt-1 text-[14px]"><Link href="/deals">Shop today&apos;s deals</Link></p>

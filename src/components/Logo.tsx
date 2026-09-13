@@ -1,5 +1,5 @@
 /** "amazon" wordmark with the smile arrow, drawn as an SVG so no trademark sprite is copied. */
-export default function Logo({ className = "", dark = false, suffix = ".com" }: { className?: string; dark?: boolean; suffix?: string }) {
+export default function Logo({ className = "", dark = false, suffix = "" }: { className?: string; dark?: boolean; suffix?: string }) {
   const c = dark ? "#0f1111" : "#fff";
   return (
     <svg className={className} viewBox="0 0 120 36" width="120" height="36" aria-label="Amazon" role="img">
