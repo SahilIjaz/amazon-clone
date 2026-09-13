@@ -8,8 +8,8 @@ import { deliveryDate, productUrl, type Product } from "@/lib/products";
 export function GridCard({ p, compact = false, eager = false }: { p: Product; compact?: boolean; eager?: boolean }) {
   return (
     <div className={`flex flex-col ${compact ? "w-[150px]" : "w-[200px]"} shrink-0`}>
-      <Link href={productUrl(p)} className="block bg-[#f7f7f7] rounded-sm p-2">
-        <div className={`relative ${compact ? "h-[150px]" : "h-[200px]"}`}><Image src={p.thumb} alt={p.title} fill sizes="200px" loading={eager ? "eager" : "lazy"} className="object-contain mix-blend-multiply" /></div>
+      <Link href={productUrl(p)} className="block bg-white rounded-sm p-2">
+        <div className={`relative ${compact ? "h-[150px]" : "h-[200px]"}`}><Image src={p.thumb} alt={p.title} fill sizes="200px" loading={eager ? "eager" : "lazy"} className="object-contain" /></div>
       </Link>
       <Link href={productUrl(p)} className="mt-2 text-[14px] leading-5 text-ink truncate-2 hover:text-link-hover hover:underline">{p.title}</Link>
       <div className="mt-1 flex items-center gap-1"><Stars rating={p.rating} small /><span className="text-[12px] text-link">{p.reviewCount.toLocaleString()}</span></div>
@@ -24,7 +24,7 @@ export function ResultCard({ p, q }: { p: Product; q?: string }) {
   const url = productUrl(p);
   return (
     <div className="s-result flex gap-4 p-4">
-      <Link href={url} className="relative block h-[280px] w-[280px] shrink-0 rounded-md bg-[#f7f7f7]"><Image src={p.thumb} alt={p.title} fill sizes="280px" className="object-contain mix-blend-multiply p-3" /></Link>
+      <Link href={url} className="relative block h-[280px] w-[280px] shrink-0 rounded-md bg-white"><Image src={p.thumb} alt={p.title} fill sizes="280px" className="object-contain p-3" /></Link>
       <div className="min-w-0 flex-1">
         {p.listPrice && <span className="mb-1 inline-block rounded-sm bg-nav px-1.5 py-0.5 text-[12px] font-bold text-white">Limited time deal</span>}
         <Link href={url} className="block"><h2 className="truncate-2">{p.title}</h2></Link>

@@ -21,7 +21,7 @@ function QuadCard({ title, items, cta, href }: { title: string; items: { label: 
       <div className="grid grid-cols-2 gap-x-3 gap-y-2">
         {items.slice(0, 4).map(({ label, p }) => (
           <Link key={p.id} href={productUrl(p)} className="block text-ink hover:text-ink hover:no-underline">
-            <div className="relative h-[116px] w-full bg-[#f7f7f7]"><Image src={p.thumb} alt={label} fill sizes="150px" className="object-contain mix-blend-multiply p-1" /></div>
+            <div className="relative h-[116px] w-full bg-white"><Image src={p.thumb} alt={label} fill sizes="150px" className="object-contain p-1" /></div>
             <span className="mt-1 block text-[12px] leading-4 truncate">{label}</span>
           </Link>
         ))}
@@ -35,7 +35,7 @@ function SingleCard({ title, p, cta, href }: { title: string; p: Product; cta: s
   return (
     <div className="gw-card">
       <h2>{title}</h2>
-      <Link href={href} className="relative block h-[280px] w-full bg-[#f7f7f7]"><Image src={p.images[0] || p.thumb} alt={p.title} fill sizes="300px" className="object-contain mix-blend-multiply p-2" /></Link>
+      <Link href={href} className="relative block h-[280px] w-full bg-white"><Image src={p.images[0] || p.thumb} alt={p.title} fill sizes="300px" className="object-contain p-2" /></Link>
       <Link href={href} className="cta">{cta}</Link>
     </div>
   );
