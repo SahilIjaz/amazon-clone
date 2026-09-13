@@ -40,7 +40,7 @@ Production build: `npm run build && npm start`. If a dev server is running in th
 
 Amazon's own listings and imagery are copyrighted, so the catalog is a public product dataset (194 items across 9 departments, `src/data/products.json`, images in `public/products`), normalised with Amazon-style fields: list price, rating, review counts, Prime eligibility, stock.
 
-The database schema lives in `src/lib/db.ts` (users, sessions, OTP codes, outbox, addresses, payment methods, carts, orders, lists, reviews, browsing history). Without `TURSO_DATABASE_URL` on Vercel the app uses an ephemeral SQLite file, so accounts reset between deployments; set `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` for persistence.
+The database schema lives in `src/lib/db.ts` (users, sessions, OTP codes, outbox, addresses, payment methods, carts, orders, lists, reviews, browsing history). In production the SQLite file is mirrored to a Vercel Blob after every write and refreshed from it across serverless instances (`BLOB_READ_WRITE_TOKEN`), so accounts, carts and orders persist. Set `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` to use a hosted Turso database instead.
 
 ## Deploy
 
