@@ -31,7 +31,7 @@
   --font-sans: "Amazon Ember", Arial, sans-serif;
 }
 
-html { font-size: 14px; }
+html { font-size: 14px; scroll-padding-top: 110px; }
 body { background: #fff; color: var(--color-ink); font-family: var(--font-sans); font-size: 14px; line-height: 20px; -webkit-font-smoothing: antialiased; }
 a { color: var(--color-link); text-decoration: none; }
 a:hover { color: var(--color-link-hover); text-decoration: underline; }
