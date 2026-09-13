@@ -36,31 +36,29 @@ export class Db {
 }
 
 /**
- * Mirrors the SQLite file to Vercel Blob. Every upload gets a fresh pathname (db/amazon-<ms>.db) because overwritten
- * blobs are served from an edge cache for up to a minute; the newest blob wins and older ones are pruned.
+ * Mirrors the SQLite file to one Vercel Blob (db/amazon.db). Discovery uses head() on that fixed pathname (the listing
+ * API is only eventually consistent), and downloads add a cache-busting query so the edge cache never serves a stale
+ * copy after an overwrite. Last writer wins, which is fine for a demo store.
  */
+const POINTER = "db/amazon.db";
 class BlobMirror {
   private lastSeen = 0; private lastCheck = 0; private uploading: Promise<void> | null = null; private dirty = false;
   constructor(public file: string) {}
   private async sdk() { return import("@vercel/blob"); }
-  private async newest() {
-    const { list } = await this.sdk();
-    const { blobs } = await list({ prefix: "db/amazon-", limit: 1000 });
-    return blobs.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
-  }
   async pullIfNewer(force = false): Promise<boolean> {
     const now = Date.now();
     if (!force && now - this.lastCheck < 1500) return false;
     this.lastCheck = now;
     try {
-      const b = (await this.newest())[0];
-      if (!b) { if (force) console.log("[db] no mirrored database yet"); return false; }
-      const at = new Date(b.uploadedAt).getTime();
+      const { head } = await this.sdk();
+      const h = await head(POINTER).catch(() => null);
+      if (!h) { if (force) console.log("[db] no mirrored database yet"); return false; }
+      const at = new Date(h.uploadedAt).getTime();
       if (at <= this.lastSeen) return false;
-      const buf = await download(b.url);
+      const buf = await download(`${h.url}?v=${at}`);
       fs.writeFileSync(this.file, buf);
       this.lastSeen = at;
-      console.log(`[db] pulled ${b.pathname} (${buf.length} bytes)`);
+      console.log(`[db] pulled mirror from ${new Date(at).toISOString()} (${buf.length} bytes)`);
       return true;
     } catch (e) { console.error("[db] blob pull failed", (e as Error).message, (e as { cause?: Error }).cause?.message); return false; }
   }
@@ -71,13 +69,10 @@ class BlobMirror {
       while (this.dirty) {
         this.dirty = false;
         try {
-          const { put, del } = await this.sdk();
-          const r = await put(`db/amazon-${Date.now()}.db`, fs.readFileSync(this.file), { access: "public", addRandomSuffix: false, contentType: "application/octet-stream" });
-          const all = await this.newest();
-          const mine = all.find((x) => x.url === r.url);
-          this.lastSeen = mine ? new Date(mine.uploadedAt).getTime() : Date.now() + 2000;
-          const stale = all.filter((x) => x.url !== r.url).slice(3).map((x) => x.url);
-          if (stale.length) await del(stale).catch(() => {});
+          const { put, head } = await this.sdk();
+          await put(POINTER, fs.readFileSync(this.file), { access: "public", addRandomSuffix: false, allowOverwrite: true, contentType: "application/octet-stream" });
+          const h = await head(POINTER).catch(() => null);
+          this.lastSeen = h ? new Date(h.uploadedAt).getTime() : Date.now() + 2000;
           console.log(`[db] mirrored ${fs.statSync(this.file).size} bytes to blob`);
         } catch (e) { console.error("[db] blob upload failed", (e as Error).message); }
       }
