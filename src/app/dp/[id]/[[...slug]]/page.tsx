@@ -29,7 +29,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       <div className="px-5 pt-3 text-[12px] text-muted">
         <Link href={`/s?i=${encodeURIComponent(p.department)}`} className="text-muted hover:text-link-hover">{p.department}</Link> › <Link href={`/s?c=${p.category}`} className="text-muted hover:text-link-hover">{CATEGORY_LABEL[p.category] || p.category}</Link> › <span>{p.brand}</span>
       </div>
-      <div className="grid gap-6 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)_300px]">
+      <div className="grid gap-6 px-5 py-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)_260px]">
         <Gallery images={p.images.length ? p.images : [p.thumb]} title={p.title} />
         <div className="min-w-0">
           <h1 className="text-[24px] font-normal leading-8 text-ink">{p.title}</h1>

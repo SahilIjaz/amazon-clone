@@ -18,6 +18,7 @@ export default async function Deals({ searchParams }: { searchParams: Promise<SP
   return (
     <div className="mx-auto max-w-[1500px] px-5 py-4">
       <div className="flex items-center gap-4 border-b border-line pb-3"><h1 className="text-[28px] font-normal">Today&apos;s Deals</h1><span className="text-[12px] text-muted">{list.length} results</span></div>
+      <div className="mt-3 flex flex-wrap gap-2 text-[13px]">{[["All deals", {}], ["Lightning deals", { min: "30" }], ["Outlet", { min: "20" }], ["Premium brands", { d: "Electronics" }], ["Prime exclusive", { prime: "1" }], ["Fashion", { d: "Women's Fashion" }], ["Home", { d: "Home & Kitchen" }], ["Beauty", { d: "Beauty & Personal Care" }]].map(([l, patch]) => <Link key={l as string} href={href({ d: undefined, min: undefined, prime: undefined, ...(patch as Partial<SP>) })} className="rounded-full border border-line bg-white px-3.5 py-1.5 text-ink hover:bg-[#f7fafa] hover:no-underline">{l as string}</Link>)}</div>
       <div className="mt-4 flex gap-6">
         <aside className="hidden w-[240px] shrink-0 text-[14px] md:block">
           <h3 className="font-bold">Department</h3>

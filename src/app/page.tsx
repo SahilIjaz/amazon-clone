@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { product as getProduct } from "@/lib/products";
 
 const SLIDES: Slide[] = [
-  { title: "Get your game on", sub: "Gaming and PC", cta: "Shop gaming", href: "/s?k=laptop", from: "#1a2a44", to: "#5b2ea6", images: ["/products/78-thumb.webp", "/products/79-thumb.webp", "/products/82-thumb.webp"] },
+  { title: "Get your game on", sub: "Gaming and PC", cta: "Shop gaming", href: "/s?k=laptop", from: "#a938fa", to: "#132563", images: ["/products/78-thumb.webp", "/products/79-thumb.webp", "/products/82-thumb.webp"] },
   { title: "Kitchen essentials under $50", sub: "Home & Kitchen", cta: "Shop kitchen", href: "/s?i=Home+%26+Kitchen&priceMax=50", from: "#0f5e56", to: "#2fb39a", images: ["/products/33-thumb.webp", "/products/41-thumb.webp", "/products/49-thumb.webp"] },
   { title: "Shop the latest in fashion", sub: "New arrivals", cta: "Shop fashion", href: "/s?i=Women%27s+Fashion", from: "#7a1f4d", to: "#e2557a", images: ["/products/165-thumb.webp", "/products/169-thumb.webp", "/products/175-thumb.webp"] },
   { title: "Beauty picks you'll love", sub: "Beauty & Personal Care", cta: "Shop beauty", href: "/s?i=Beauty+%26+Personal+Care", from: "#3d2b6b", to: "#c56bb0", images: ["/products/1-thumb.webp", "/products/6-thumb.webp", "/products/9-thumb.webp"] },
