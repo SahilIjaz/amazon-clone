@@ -45,13 +45,20 @@ class BlobMirror {
   private lastSeen = 0; private lastCheck = 0; private uploading: Promise<void> | null = null; private dirty = false;
   constructor(public file: string) {}
   private async sdk() { return import("@vercel/blob"); }
+  /** head() with retries: an overwrite in progress can 404 for a moment. */
+  private async pointer(): Promise<{ url: string; uploadedAt: Date } | null> {
+    const { head, list } = await this.sdk();
+    for (let i = 0; i < 4; i++) {
+      try { return await head(POINTER); } catch { await new Promise((r) => setTimeout(r, 200 * (i + 1))); }
+    }
+    try { const { blobs } = await list({ prefix: POINTER, limit: 1 }); return blobs[0] ?? null; } catch { return null; }
+  }
   async pullIfNewer(force = false): Promise<boolean> {
     const now = Date.now();
-    if (!force && now - this.lastCheck < 1500) return false;
+    if (!force && now - this.lastCheck < 400) return false;
     this.lastCheck = now;
     try {
-      const { head } = await this.sdk();
-      const h = await head(POINTER).catch(() => null);
+      const h = await this.pointer();
       if (!h) { if (force) console.log("[db] no mirrored database yet"); return false; }
       const at = new Date(h.uploadedAt).getTime();
       if (at <= this.lastSeen) return false;
@@ -69,9 +76,9 @@ class BlobMirror {
       while (this.dirty) {
         this.dirty = false;
         try {
-          const { put, head } = await this.sdk();
+          const { put } = await this.sdk();
           await put(POINTER, fs.readFileSync(this.file), { access: "public", addRandomSuffix: false, allowOverwrite: true, contentType: "application/octet-stream" });
-          const h = await head(POINTER).catch(() => null);
+          const h = await this.pointer();
           this.lastSeen = h ? new Date(h.uploadedAt).getTime() : Date.now() + 2000;
           console.log(`[db] mirrored ${fs.statSync(this.file).size} bytes to blob`);
         } catch (e) { console.error("[db] blob upload failed", (e as Error).message); }
